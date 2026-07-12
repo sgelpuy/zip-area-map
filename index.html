@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>우편번호 구역 지도</title>
+<style>
+  html, body { height: 100%; margin: 0; font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #toolbar {
+    display: flex; gap: 8px; align-items: center;
+    padding: 10px 14px; background: #1f2937; color: #fff; flex-wrap: wrap;
+  }
+  #toolbar label { font-size: 14px; }
+  #zipInput {
+    flex: 1; min-width: 260px; padding: 8px 10px; font-size: 14px;
+    border: none; border-radius: 4px;
+  }
+  #drawBtn, #clearBtn {
+    padding: 8px 16px; font-size: 14px; border: none; border-radius: 4px;
+    cursor: pointer; color: #fff;
+  }
+  #drawBtn { background: #2563eb; }
+  #drawBtn:hover { background: #1d4ed8; }
+  #clearBtn { background: #6b7280; }
+  #clearBtn:hover { background: #4b5563; }
+  #status { font-size: 13px; color: #d1d5db; width: 100%; }
+  #status .not-found { color: #fca5a5; }
+  #map { flex: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <label for="zipInput">우편번호</label>
+    <input id="zipInput" type="text" placeholder="예: 48951, 48952, 48953 (쉼표 또는 공백으로 구분)" />
+    <button id="drawBtn">지도에 표시</button>
+    <button id="clearBtn">초기화</button>
+    <div id="status"></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=eac983aa6e504fed77d10bbae85d63e7"></script>
+<script>
+const map = new kakao.maps.Map(document.getElementById('map'), {
+  center: new kakao.maps.LatLng(36.5, 127.8),
+  level: 12,
+});
+window.map = map;
+
+let currentOverlays = [];
+const colors = ['#0033ff', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2'];
+
+function normalizeCodes(raw) {
+  return raw.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
+}
+
+function ringToPath(ring) {
+  // drop the closing duplicate point; kakao closes the ring automatically
+  return ring.slice(0, -1).map(([lon, lat]) => new kakao.maps.LatLng(lat, lon));
+}
+
+function entryToPolygonPaths(entry) {
+  // returns array of "path" arrays, one per polygon (each path may contain
+  // multiple rings: [outer, hole, hole, ...])
+  if (entry.type === 'Polygon') {
+    return [entry.coordinates.map(ringToPath)];
+  }
+  // MultiPolygon: array of polygons, each an array of rings
+  return entry.coordinates.map(polygon => polygon.map(ringToPath));
+}
+
+async function fetchZipEntry(code) {
+  const shard = code.slice(0, 2);
+  const res = await fetch(`data/${shard}/${code}.json`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function drawZipcodes() {
+  const raw = document.getElementById('zipInput').value;
+  const codes = normalizeCodes(raw);
+  const statusEl = document.getElementById('status');
+  if (codes.length === 0) {
+    statusEl.textContent = '우편번호를 입력해 주세요.';
+    return;
+  }
+
+  statusEl.textContent = '조회 중...';
+
+  currentOverlays.forEach(ov => ov.setMap(null));
+  currentOverlays = [];
+
+  const bounds = new kakao.maps.LatLngBounds();
+  const found = [];
+  const notFound = [];
+  let colorIdx = 0;
+
+  const results = await Promise.all(codes.map(async code => {
+    const entry = await fetchZipEntry(code);
+    return { code, entry };
+  }));
+
+  for (const { code, entry } of results) {
+    if (!entry) {
+      notFound.push(code);
+      continue;
+    }
+    found.push(code);
+    const color = colors[colorIdx % colors.length];
+    colorIdx++;
+
+    const polygonPaths = entryToPolygonPaths(entry);
+    for (const path of polygonPaths) {
+      const polygon = new kakao.maps.Polygon({
+        path,
+        strokeWeight: 4,
+        strokeColor: color,
+        strokeOpacity: 0.9,
+        fillColor: color,
+        fillOpacity: 0.15,
+      });
+      polygon.setMap(map);
+      currentOverlays.push(polygon);
+
+      path.forEach(ring => ring.forEach(p => bounds.extend(p)));
+    }
+
+    const infowindow = new kakao.maps.InfoWindow({
+      content: `<div style="padding:4px 8px;font-size:12px;">${entry.zipcode} (${entry.region})</div>`,
+      removable: false,
+    });
+    const centerPath = polygonPaths[0][0];
+    const centerPt = centerPath[Math.floor(centerPath.length / 2)];
+    infowindow.setPosition(centerPt);
+    // keep a lightweight label; opened on demand via click
+    kakao.maps.event.addListener(currentOverlays[currentOverlays.length - 1], 'click', () => {
+      infowindow.open(map);
+    });
+  }
+
+  if (found.length > 0) {
+    map.setBounds(bounds);
+  }
+
+  let msg = `찾음: ${found.length}개`;
+  if (notFound.length > 0) {
+    msg += ` / <span class="not-found">찾지 못함: ${notFound.join(', ')}</span>`;
+  }
+  statusEl.innerHTML = msg;
+}
+
+document.getElementById('drawBtn').addEventListener('click', drawZipcodes);
+document.getElementById('zipInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') drawZipcodes();
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.getElementById('zipInput').value = '';
+  document.getElementById('status').textContent = '';
+  currentOverlays.forEach(ov => ov.setMap(null));
+  currentOverlays = [];
+  map.setCenter(new kakao.maps.LatLng(36.5, 127.8));
+  map.setLevel(12);
+});
+</script>
+</body>
+</html>
