@@ -127,8 +127,11 @@ async function drawZipcodes() {
       path.forEach(ring => ring.forEach(p => bounds.extend(p)));
     }
 
+    const hhText = entry.estimated_households != null
+      ? `<br/>예상 세대수: 약 ${Math.round(entry.estimated_households).toLocaleString()}세대 (행정동 면적 비례 추정치)`
+      : '';
     const infowindow = new kakao.maps.InfoWindow({
-      content: `<div style="padding:4px 8px;font-size:12px;">${entry.zipcode} (${entry.region})</div>`,
+      content: `<div style="padding:4px 8px;font-size:12px;">${entry.zipcode} (${entry.region})${hhText}</div>`,
       removable: false,
     });
     const centerPath = polygonPaths[0][0];
