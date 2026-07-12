@@ -26,19 +26,33 @@
   #clearBtn:hover { background: #4b5563; }
   #status { font-size: 13px; color: #d1d5db; width: 100%; }
   #status .not-found { color: #fca5a5; }
-  #map { flex: 1; }
+  #map { flex: 1; position: relative; }
+  #legend {
+    position: absolute; right: 12px; bottom: 24px; z-index: 10;
+    background: rgba(255,255,255,0.95); border-radius: 6px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+    padding: 10px 12px; font-size: 12px; max-width: 260px;
+    max-height: 240px; overflow-y: auto; display: none;
+  }
+  #legend h4 { margin: 0 0 6px; font-size: 12px; color: #374151; }
+  #legend .legend-item { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; }
+  #legend .swatch { width: 12px; height: 12px; border-radius: 2px; flex: none; margin-top: 2px; }
+  #legend .legend-text { line-height: 1.3; color: #111827; }
+  #legend .legend-hh { color: #6b7280; }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="toolbar">
     <label for="zipInput">우편번호</label>
-    <input id="zipInput" type="text" placeholder="예: 48951, 48952, 48953 (쉼표 또는 공백으로 구분)" />
+    <input id="zipInput" type="text" placeholder="예: 48951, 48952, 48953 (쉼표, 공백, / 로 구분)" />
     <button id="drawBtn">지도에 표시</button>
     <button id="clearBtn">초기화</button>
     <div id="status"></div>
   </div>
-  <div id="map"></div>
+  <div id="map">
+    <div id="legend"></div>
+  </div>
 </div>
 
 <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=cda2e8e8b1a63a98030e01e35c9bd431"></script>
@@ -53,7 +67,7 @@ let currentOverlays = [];
 const colors = ['#0033ff', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2'];
 
 function normalizeCodes(raw) {
-  return raw.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
+  return raw.split(/[\s,/]+/).map(s => s.trim()).filter(Boolean);
 }
 
 function ringToPath(ring) {
@@ -95,6 +109,7 @@ async function drawZipcodes() {
   const bounds = new kakao.maps.LatLngBounds();
   const found = [];
   const notFound = [];
+  const legendItems = [];
   let colorIdx = 0;
 
   const results = await Promise.all(codes.map(async code => {
@@ -141,17 +156,50 @@ async function drawZipcodes() {
     kakao.maps.event.addListener(currentOverlays[currentOverlays.length - 1], 'click', () => {
       infowindow.open(map);
     });
+
+    legendItems.push({
+      color,
+      zipcode: entry.zipcode,
+      region: entry.region,
+      households: entry.estimated_households,
+    });
   }
 
   if (found.length > 0) {
     map.setBounds(bounds);
   }
 
+  renderLegend(legendItems);
+
   let msg = `찾음: ${found.length}개`;
   if (notFound.length > 0) {
     msg += ` / <span class="not-found">찾지 못함: ${notFound.join(', ')}</span>`;
   }
   statusEl.innerHTML = msg;
+}
+
+function renderLegend(items) {
+  const legendEl = document.getElementById('legend');
+  if (items.length === 0) {
+    legendEl.style.display = 'none';
+    legendEl.innerHTML = '';
+    return;
+  }
+  const rows = items.map(item => {
+    const hh = item.households != null
+      ? `<div class="legend-hh">예상 약 ${Math.round(item.households).toLocaleString()}세대</div>`
+      : '';
+    return `
+      <div class="legend-item">
+        <span class="swatch" style="background:${item.color}"></span>
+        <div class="legend-text">
+          <div>${item.zipcode} (${item.region})</div>
+          ${hh}
+        </div>
+      </div>`;
+  }).join('');
+  legendEl.innerHTML = `<h4>우편번호 구역</h4>${rows}`;
+  legendEl.style.display = 'block';
 }
 
 document.getElementById('drawBtn').addEventListener('click', drawZipcodes);
@@ -163,6 +211,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   document.getElementById('status').textContent = '';
   currentOverlays.forEach(ov => ov.setMap(null));
   currentOverlays = [];
+  renderLegend([]);
   map.setCenter(new kakao.maps.LatLng(36.5, 127.8));
   map.setLevel(12);
 });
