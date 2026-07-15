@@ -155,7 +155,7 @@ async function drawZipcodes() {
       region: entry.region,
       households: entry.estimated_households,
       score: entry.score,
-      scoreExcluded: entry.score_excluded || [],
+      ratios: entry.ratios || null,
     });
   }
 
@@ -175,9 +175,11 @@ async function drawZipcodes() {
 // 임시 등급 구간(공식 등급표 확정 전까지의 잠정 기준): 높을수록 유리한 구역
 function scoreBadge(score) {
   if (score == null) return null;
-  if (score >= 70) return { label: '꿀자리', color: '#059669' };
-  if (score >= 40) return { label: '평타', color: '#d97706' };
-  return { label: '기피구역', color: '#dc2626' };
+  if (score >= 85) return { label: 'S', color: '#059669' };
+  if (score >= 70) return { label: 'A', color: '#65a30d' };
+  if (score >= 55) return { label: 'B', color: '#d97706' };
+  if (score >= 40) return { label: 'C', color: '#ea580c' };
+  return { label: 'D', color: '#dc2626' };
 }
 
 function renderLegend(items) {
@@ -195,8 +197,9 @@ function renderLegend(items) {
     const scoreLine = badge
       ? `<div class="legend-score"><span class="score-badge" style="background:${badge.color}">${badge.label}</span><span>${item.score.toFixed(1)}점</span></div>`
       : `<div class="legend-score score-none">종합점수: 데이터 부족</div>`;
-    const excludedLine = item.scoreExcluded.length > 0
-      ? `<div class="legend-excluded">제외: ${item.scoreExcluded.join(', ')}</div>`
+    const r = item.ratios;
+    const excludedLine = (r && (r.apt != null || r.officetel != null || r.villa != null || r.jibun != null))
+      ? `<div class="legend-excluded">아파트 ${r.apt ?? '-'}% · 오피스텔 ${r.officetel ?? '-'}% · 빌라 ${r.villa ?? '-'}% · 지번 ${r.jibun ?? '-'}%</div>`
       : '';
     return `
       <div class="legend-item">

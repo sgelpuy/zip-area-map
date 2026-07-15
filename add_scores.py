@@ -13,6 +13,18 @@ DATA_DIR = os.path.join(WEBAPP_DIR, "data")
 SCORE_CSV = os.path.join(WEBAPP_DIR, "..", "..", "우편번호_구역평가_점수.csv")
 
 CATEGORY_COLUMNS = ["물량평가", "환경평가", "접근성평가", "캠프거리평가"]
+RATIO_COLUMNS = {
+    "아파트비율(%)": "apt",
+    "오피스텔비율(%)": "officetel",
+    "빌라비율(%)": "villa",
+    "지번비율(%)": "jibun",
+}
+
+
+def _num(v):
+    if v is None or v == "":
+        return None
+    return round(float(v), 1)
 
 
 def main():
@@ -37,6 +49,7 @@ def main():
 
             entry["score"] = round(float(composite), 1) if composite else None
             entry["score_excluded"] = sorted(excluded)
+            entry["ratios"] = {key: _num(row.get(col)) for col, key in RATIO_COLUMNS.items()}
 
             with open(path, "w", encoding="utf-8") as jf:
                 json.dump(entry, jf, ensure_ascii=False, separators=(",", ":"))
