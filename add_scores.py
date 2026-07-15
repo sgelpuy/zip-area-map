@@ -1,0 +1,49 @@
+"""run_scoring.py가 만든 우편번호_구역평가_점수.csv를 웹앱의 data/*.json에 병합한다.
+population_join.py와 같은 패턴: 각 우편번호 json 파일을 읽어서 점수 필드를 덧붙이고 다시 쓴다.
+
+일일물량/캠프거리처럼 아직 없는 데이터가 채워져서 run_scoring.py를 다시 돌리면,
+이 스크립트도 다시 실행해서 웹앱 데이터를 갱신하면 된다.
+"""
+import csv
+import json
+import os
+
+WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(WEBAPP_DIR, "data")
+SCORE_CSV = os.path.join(WEBAPP_DIR, "..", "..", "우편번호_구역평가_점수.csv")
+
+CATEGORY_COLUMNS = ["물량평가", "환경평가", "접근성평가", "캠프거리평가"]
+
+
+def main():
+    updated = 0
+    missing_json = 0
+
+    with open(SCORE_CSV, encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            zipcode = row["우편번호"].strip()
+            shard = zipcode[:2]
+            path = os.path.join(DATA_DIR, shard, f"{zipcode}.json")
+            if not os.path.exists(path):
+                missing_json += 1
+                continue
+
+            excluded = set(c for c in row["제외카테고리"].split(",") if c)
+            composite = row["종합점수"]
+
+            with open(path, encoding="utf-8") as jf:
+                entry = json.load(jf)
+
+            entry["score"] = round(float(composite), 1) if composite else None
+            entry["score_excluded"] = sorted(excluded)
+
+            with open(path, "w", encoding="utf-8") as jf:
+                json.dump(entry, jf, ensure_ascii=False, separators=(",", ":"))
+            updated += 1
+
+    print(f"완료: {updated}개 json에 점수 반영, json 파일 없어서 건너뜀 {missing_json}건")
+
+
+if __name__ == "__main__":
+    main()
