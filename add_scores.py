@@ -12,7 +12,7 @@ WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WEBAPP_DIR, "data")
 SCORE_CSV = os.path.join(WEBAPP_DIR, "..", "..", "우편번호_구역평가_점수.csv")
 
-CATEGORY_COLUMNS = ["물량평가", "환경평가", "접근성평가", "캠프거리평가"]
+CATEGORY_COLUMNS = ["환경평가", "세대수평가", "접근성평가"]
 RATIO_COLUMNS = {
     "아파트비율(%)": "apt",
     "오피스텔비율(%)": "officetel",
