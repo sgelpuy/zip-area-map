@@ -28,14 +28,9 @@ def _num(v):
 
 
 def build_ratios(row):
-    ratios = {key: _num(row.get(col)) for col, key in RATIO_COLUMNS.items()}
-    known = [v for v in ratios.values() if v is not None]
-    if not known:
-        return ratios
-    # 아파트/오피스텔/빌라/단독주택은 건물 하나당 한 카테고리로만 집계되므로(aggregate.py 참고)
-    # 서로 겹치지 않는다 -> 나머지는 근린생활시설/공장/창고 등 "기타" 건물 비중
-    ratios["other"] = round(max(0.0, 100.0 - sum(known)), 1)
-    return ratios
+    # 아파트/오피스텔/빌라/단독주택 세대수만으로 분모를 잡아서(aggregate.py 참고)
+    # 네 비율의 합이 항상 100%가 되도록 계산돼 있다.
+    return {key: _num(row.get(col)) for col, key in RATIO_COLUMNS.items()}
 
 
 def main():
