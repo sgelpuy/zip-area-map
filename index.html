@@ -13,6 +13,9 @@
 
   gtag('config', 'G-KJ16KG541T');
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --surface-1: #fcfcfb;
@@ -31,19 +34,19 @@
     --ratio-danok: #1baf7a;
     --ratio-other: #c3c2b7;
   }
-  html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  html, body { height: 100%; margin: 0; font-family: "Noto Sans KR", system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
   #app { display: flex; flex-direction: column; height: 100%; }
   #toolbar {
     display: flex; gap: 8px; align-items: center;
     padding: 10px 14px; background: #1f2937; color: #fff; flex-wrap: wrap;
   }
-  #toolbar label { font-size: 14px; }
+  #toolbar label { font-size: 16px; }
   #zipInput {
-    flex: 1; min-width: 260px; padding: 8px 10px; font-size: 14px;
+    flex: 1; min-width: 260px; padding: 8px 10px; font-size: 16px;
     border: none; border-radius: 4px;
   }
   #drawBtn, #clearBtn, #captureBtn {
-    padding: 8px 16px; font-size: 14px; font-weight: 500; border: none; border-radius: 4px;
+    padding: 8px 16px; font-size: 16px; font-weight: 500; border: none; border-radius: 4px;
     cursor: pointer; color: #fff;
   }
   #drawBtn { background: #2563eb; }
@@ -52,65 +55,75 @@
   #clearBtn:hover { background: #4b5563; }
   #captureBtn { background: #059669; }
   #captureBtn:hover { background: #047857; }
-  #status { font-size: 13px; color: #d1d5db; width: 100%; }
+  #status { font-size: 15px; color: #d1d5db; width: 100%; }
   #status .not-found { color: #fca5a5; }
   #map { flex: 1; position: relative; }
 
+  #howBtn {
+    position: absolute; top: 12px; left: 12px; z-index: 11;
+    background: var(--surface-1); border: 1px solid var(--border-hairline);
+    border-radius: 8px; padding: 9px 14px; font-size: 15px; font-weight: 600;
+    color: var(--text-primary); cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    font-family: inherit;
+  }
+  #howBtn:hover { background: #f3f2ef; }
+  #howPopup {
+    position: absolute; top: 58px; left: 12px; z-index: 12;
+    width: 340px; max-width: calc(100vw - 40px);
+    background: var(--surface-1); border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25); border: 1px solid var(--border-hairline);
+    padding: 16px 18px; font-size: 15px; line-height: 1.55; color: var(--text-primary);
+    display: none;
+  }
+  #howPopup h4 { margin: 0 0 8px; font-size: 16px; }
+  #howPopup ul { margin: 6px 0 10px; padding-left: 18px; }
+  #howPopup li { margin-bottom: 4px; }
+  #howPopup .how-note { font-size: 13px; color: var(--text-secondary); margin-top: 8px; }
+
   #legend {
     position: absolute; right: 12px; bottom: 24px; z-index: 10;
-    width: 300px; max-height: min(70vh, 520px); overflow-y: auto;
-    display: none; flex-direction: column; gap: 10px;
+    width: 375px; max-height: min(75vh, 650px); overflow-y: auto;
+    display: none; flex-direction: column; gap: 12px;
   }
   #legend .legend-heading {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
     color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); padding-left: 2px;
   }
   .zone-card {
     background: var(--surface-1); border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.18);
     border: 1px solid var(--border-hairline);
-    padding: 12px 14px; font-size: 13px; color: var(--text-primary);
+    padding: 15px 18px; font-size: 15px; color: var(--text-primary);
   }
   .zone-card__header { display: flex; align-items: center; gap: 8px; }
-  .zone-card__dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .zone-card__dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
   .zone-card__title { flex: 1; min-width: 0; }
-  .zone-card__zip { font-weight: 700; font-size: 14px; }
-  .zone-card__region { color: var(--text-secondary); font-size: 12px; }
+  .zone-card__zip { font-weight: 700; font-size: 16px; }
 
   .grade-pill {
     display: flex; align-items: center; gap: 8px; flex: none;
   }
   .grade-pill__letter {
-    width: 28px; height: 28px; border-radius: 50%; color: #fff;
-    font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%; color: #fff;
+    font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center;
     flex: none;
   }
   .grade-pill__meta { display: flex; flex-direction: column; line-height: 1.25; }
-  .grade-pill__grade { font-weight: 700; font-size: 12px; color: var(--text-primary); }
-  .grade-pill__score { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-  .grade-none { font-size: 11px; color: var(--text-muted); font-style: italic; white-space: nowrap; }
+  .grade-pill__grade { font-weight: 800; font-size: 18px; color: var(--text-primary); }
+  .grade-pill__score { font-size: 16px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .grade-none { font-size: 13px; color: var(--text-muted); font-style: italic; white-space: nowrap; }
 
   .zone-card__hh {
-    margin-top: 6px; font-size: 12px; color: var(--text-secondary);
+    margin-top: 6px; font-size: 14px; color: var(--text-secondary);
     display: flex; align-items: center; gap: 4px;
   }
 
-  .composition { margin-top: 10px; }
-  .composition__label {
-    font-size: 11px; font-weight: 600; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 5px;
-  }
-  .composition__bar {
-    display: flex; height: 10px; border-radius: 5px; overflow: hidden;
-    background: var(--surface-1); gap: 2px;
-  }
-  .composition__seg { height: 100%; }
-  .composition__legend {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 6px;
-  }
-  .composition__item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
-  .composition__dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
-  .composition__value { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .ratio-grid { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .ratio-row { display: grid; grid-template-columns: 60px 1fr 40px; align-items: center; gap: 8px; }
+  .ratio-row__label { font-size: 13px; color: var(--text-secondary); }
+  .ratio-row__track { display: block; height: 7px; border-radius: 3.5px; background: var(--border-hairline); overflow: hidden; }
+  .ratio-row__fill { display: block; height: 100%; border-radius: 3.5px; }
+  .ratio-row__value { font-size: 13px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -124,6 +137,20 @@
     <div id="status"></div>
   </div>
   <div id="map">
+    <button id="howBtn">점수 계산 방식</button>
+    <div id="howPopup">
+      <h4>종합점수는 이렇게 계산돼요</h4>
+      <ul>
+        <li><b>물량평가 (30%)</b> — 하루 배송 물량이 많을수록 유리</li>
+        <li><b>환경평가 (25%)</b> — 아파트·오피스텔 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
+        <li><b>접근성평가 (20%)</b> — 엘리베이터 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
+        <li><b>캠프거리평가 (25%)</b> — 캠프에서 배송지까지 거리가 가까울수록 유리</li>
+      </ul>
+      <div class="how-note">
+        아직 확보 안 된 데이터(물량, 캠프거리)가 있는 구역은 해당 항목을 계산에서 완전히 빼고,
+        나머지 항목 비중으로 다시 나눠서 점수를 냅니다. 등급은 S(85점↑)·A(70↑)·B(55↑)·C(40↑)·D(그 미만) 5단계예요.
+      </div>
+    </div>
     <div id="legend"></div>
   </div>
 </div>
@@ -248,40 +275,27 @@ function scoreBadge(score) {
   return { label: 'D', color: 'var(--grade-d)' };
 }
 
-// 아파트/오피스텔/빌라/단독주택은 건물 하나당 한 카테고리로만 집계되어 서로 겹치지 않으므로
-// (aggregate.py 참고) 네 값 + 기타(근린생활시설/공장/창고 등)를 더하면 항상 100%가 된다.
 const RATIO_META = [
   { key: 'apt', label: '아파트', color: 'var(--ratio-apt)' },
   { key: 'officetel', label: '오피스텔', color: 'var(--ratio-officetel)' },
   { key: 'villa', label: '빌라', color: 'var(--ratio-villa)' },
   { key: 'danok', label: '단독주택', color: 'var(--ratio-danok)' },
-  { key: 'other', label: '기타', color: 'var(--ratio-other)' },
 ];
 
 function renderComposition(ratios) {
   if (!ratios) return '';
-  const segments = RATIO_META
-    .map(({ key, label, color }) => ({ key, label, color, value: ratios[key] }))
-    .filter(({ value }) => value != null && value > 0);
-  if (segments.length === 0) return '';
-
-  const bar = segments.map(({ color, value }) =>
-    `<span class="composition__seg" style="width:${value}%;background:${color}"></span>`
-  ).join('');
-
-  const legend = segments.map(({ label, color, value }) => `
-    <div class="composition__item">
-      <span class="composition__dot" style="background:${color}"></span>
-      <span>${label}</span>
-      <span class="composition__value">${value}%</span>
-    </div>`).join('');
-
-  return `
-    <div class="composition">
-      <div class="composition__label">건물 유형 구성 (100% 기준)</div>
-      <div class="composition__bar">${bar}</div>
-      <div class="composition__legend">${legend}</div>
-    </div>`;
+  const rows = RATIO_META.map(({ key, label, color }) => {
+    const value = ratios[key];
+    if (value == null) return '';
+    const width = Math.max(0, Math.min(100, value));
+    return `
+      <div class="ratio-row">
+        <span class="ratio-row__label">${label}</span>
+        <span class="ratio-row__track"><span class="ratio-row__fill" style="width:${width}%;background:${color}"></span></span>
+        <span class="ratio-row__value">${value}%</span>
+      </div>`;
+  }).join('');
+  return rows ? `<div class="ratio-grid">${rows}</div>` : '';
 }
 
 function renderLegend(items) {
@@ -293,7 +307,7 @@ function renderLegend(items) {
   }
   const cards = items.map(item => {
     const hh = item.households != null
-      ? `<div class="zone-card__hh">🏠 예상 약 ${Math.round(item.households).toLocaleString()}세대</div>`
+      ? `<div class="zone-card__hh">🏠 약 ${Math.round(item.households).toLocaleString()}세대</div>`
       : '';
     const badge = scoreBadge(item.score);
     const gradeHtml = badge
@@ -312,7 +326,6 @@ function renderLegend(items) {
           <span class="zone-card__dot" style="background:${item.color}"></span>
           <div class="zone-card__title">
             <div class="zone-card__zip">${item.zipcode}</div>
-            <div class="zone-card__region">${item.region}</div>
           </div>
           ${gradeHtml}
         </div>
@@ -380,6 +393,18 @@ async function captureScreen() {
 }
 
 document.getElementById('captureBtn').addEventListener('click', captureScreen);
+
+const howBtn = document.getElementById('howBtn');
+const howPopup = document.getElementById('howPopup');
+howBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  howPopup.style.display = howPopup.style.display === 'block' ? 'none' : 'block';
+});
+document.addEventListener('click', (e) => {
+  if (howPopup.style.display === 'block' && !howPopup.contains(e.target) && e.target !== howBtn) {
+    howPopup.style.display = 'none';
+  }
+});
 </script>
 </body>
 </html>
