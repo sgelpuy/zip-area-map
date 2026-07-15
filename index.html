@@ -28,7 +28,8 @@
     --ratio-apt: #2a78d6;
     --ratio-officetel: #e87ba4;
     --ratio-villa: #4a3aa7;
-    --ratio-jibun: #1baf7a;
+    --ratio-danok: #1baf7a;
+    --ratio-other: #c3c2b7;
   }
   html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
   #app { display: flex; flex-direction: column; height: 100%; }
@@ -77,13 +78,16 @@
   .zone-card__region { color: var(--text-secondary); font-size: 12px; }
 
   .grade-pill {
-    display: flex; align-items: center; gap: 6px; flex: none;
+    display: flex; align-items: center; gap: 8px; flex: none;
   }
   .grade-pill__letter {
-    width: 26px; height: 26px; border-radius: 50%; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%; color: #fff;
     font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    flex: none;
   }
-  .grade-pill__score { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .grade-pill__meta { display: flex; flex-direction: column; line-height: 1.25; }
+  .grade-pill__grade { font-weight: 700; font-size: 12px; color: var(--text-primary); }
+  .grade-pill__score { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .grade-none { font-size: 11px; color: var(--text-muted); font-style: italic; white-space: nowrap; }
 
   .zone-card__hh {
@@ -91,12 +95,22 @@
     display: flex; align-items: center; gap: 4px;
   }
 
-  .ratio-grid { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
-  .ratio-row { display: grid; grid-template-columns: 44px 1fr 34px; align-items: center; gap: 8px; }
-  .ratio-row__label { font-size: 11px; color: var(--text-secondary); }
-  .ratio-row__track { display: block; height: 6px; border-radius: 3px; background: var(--border-hairline); overflow: hidden; }
-  .ratio-row__fill { display: block; height: 100%; border-radius: 3px; }
-  .ratio-row__value { font-size: 11px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+  .composition { margin-top: 10px; }
+  .composition__label {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 5px;
+  }
+  .composition__bar {
+    display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+    background: var(--surface-1); gap: 2px;
+  }
+  .composition__seg { height: 100%; }
+  .composition__legend {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 6px;
+  }
+  .composition__item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+  .composition__dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .composition__value { margin-left: auto; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -234,27 +248,40 @@ function scoreBadge(score) {
   return { label: 'D', color: 'var(--grade-d)' };
 }
 
+// 아파트/오피스텔/빌라/단독주택은 건물 하나당 한 카테고리로만 집계되어 서로 겹치지 않으므로
+// (aggregate.py 참고) 네 값 + 기타(근린생활시설/공장/창고 등)를 더하면 항상 100%가 된다.
 const RATIO_META = [
   { key: 'apt', label: '아파트', color: 'var(--ratio-apt)' },
   { key: 'officetel', label: '오피스텔', color: 'var(--ratio-officetel)' },
   { key: 'villa', label: '빌라', color: 'var(--ratio-villa)' },
-  { key: 'jibun', label: '지번', color: 'var(--ratio-jibun)' },
+  { key: 'danok', label: '단독주택', color: 'var(--ratio-danok)' },
+  { key: 'other', label: '기타', color: 'var(--ratio-other)' },
 ];
 
-function renderRatioRows(ratios) {
+function renderComposition(ratios) {
   if (!ratios) return '';
-  const rows = RATIO_META.map(({ key, label, color }) => {
-    const value = ratios[key];
-    if (value == null) return '';
-    const width = Math.max(0, Math.min(100, value));
-    return `
-      <div class="ratio-row">
-        <span class="ratio-row__label">${label}</span>
-        <span class="ratio-row__track"><span class="ratio-row__fill" style="width:${width}%;background:${color}"></span></span>
-        <span class="ratio-row__value">${value}%</span>
-      </div>`;
-  }).join('');
-  return rows ? `<div class="ratio-grid">${rows}</div>` : '';
+  const segments = RATIO_META
+    .map(({ key, label, color }) => ({ key, label, color, value: ratios[key] }))
+    .filter(({ value }) => value != null && value > 0);
+  if (segments.length === 0) return '';
+
+  const bar = segments.map(({ color, value }) =>
+    `<span class="composition__seg" style="width:${value}%;background:${color}"></span>`
+  ).join('');
+
+  const legend = segments.map(({ label, color, value }) => `
+    <div class="composition__item">
+      <span class="composition__dot" style="background:${color}"></span>
+      <span>${label}</span>
+      <span class="composition__value">${value}%</span>
+    </div>`).join('');
+
+  return `
+    <div class="composition">
+      <div class="composition__label">건물 유형 구성 (100% 기준)</div>
+      <div class="composition__bar">${bar}</div>
+      <div class="composition__legend">${legend}</div>
+    </div>`;
 }
 
 function renderLegend(items) {
@@ -272,7 +299,10 @@ function renderLegend(items) {
     const gradeHtml = badge
       ? `<div class="grade-pill">
            <span class="grade-pill__letter" style="background:${badge.color}">${badge.label}</span>
-           <span class="grade-pill__score">${item.score.toFixed(1)}점</span>
+           <div class="grade-pill__meta">
+             <span class="grade-pill__grade">${badge.label}등급</span>
+             <span class="grade-pill__score">${item.score.toFixed(1)}점</span>
+           </div>
          </div>`
       : `<span class="grade-none">평가 데이터 부족</span>`;
 
@@ -287,7 +317,7 @@ function renderLegend(items) {
           ${gradeHtml}
         </div>
         ${hh}
-        ${renderRatioRows(item.ratios)}
+        ${renderComposition(item.ratios)}
       </div>`;
   }).join('');
   legendEl.innerHTML = `<div class="legend-heading">우편번호 구역</div>${cards}`;

@@ -17,7 +17,7 @@ RATIO_COLUMNS = {
     "아파트비율(%)": "apt",
     "오피스텔비율(%)": "officetel",
     "빌라비율(%)": "villa",
-    "지번비율(%)": "jibun",
+    "단독주택비율(%)": "danok",
 }
 
 
@@ -25,6 +25,17 @@ def _num(v):
     if v is None or v == "":
         return None
     return round(float(v), 1)
+
+
+def build_ratios(row):
+    ratios = {key: _num(row.get(col)) for col, key in RATIO_COLUMNS.items()}
+    known = [v for v in ratios.values() if v is not None]
+    if not known:
+        return ratios
+    # 아파트/오피스텔/빌라/단독주택은 건물 하나당 한 카테고리로만 집계되므로(aggregate.py 참고)
+    # 서로 겹치지 않는다 -> 나머지는 근린생활시설/공장/창고 등 "기타" 건물 비중
+    ratios["other"] = round(max(0.0, 100.0 - sum(known)), 1)
+    return ratios
 
 
 def main():
@@ -49,7 +60,7 @@ def main():
 
             entry["score"] = round(float(composite), 1) if composite else None
             entry["score_excluded"] = sorted(excluded)
-            entry["ratios"] = {key: _num(row.get(col)) for col, key in RATIO_COLUMNS.items()}
+            entry["ratios"] = build_ratios(row)
 
             with open(path, "w", encoding="utf-8") as jf:
                 json.dump(entry, jf, ensure_ascii=False, separators=(",", ":"))
