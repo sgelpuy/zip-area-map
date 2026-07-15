@@ -24,6 +24,8 @@
   #drawBtn:hover { background: #1d4ed8; }
   #clearBtn { background: #6b7280; }
   #clearBtn:hover { background: #4b5563; }
+  #captureBtn { background: #059669; }
+  #captureBtn:hover { background: #047857; }
   #status { font-size: 13px; color: #d1d5db; width: 100%; }
   #status .not-found { color: #fca5a5; }
   #map { flex: 1; position: relative; }
@@ -55,6 +57,7 @@
     <input id="zipInput" type="text" placeholder="예: 48951, 48952, 48953 (쉼표, 공백, / 로 구분)" />
     <button id="drawBtn">지도에 표시</button>
     <button id="clearBtn">초기화</button>
+    <button id="captureBtn" title="클릭 후 브라우저가 물어보는 공유 대상에서 '전체 화면'을 선택하면 캡처됩니다">캡처</button>
     <div id="status"></div>
   </div>
   <div id="map">
@@ -229,6 +232,49 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   map.setCenter(new kakao.maps.LatLng(36.5, 127.8));
   map.setLevel(12);
 });
+
+async function captureScreen() {
+  const statusEl = document.getElementById('status');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    alert('이 브라우저는 화면 캡처를 지원하지 않습니다.');
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: 'monitor' },
+      audio: false,
+    });
+  } catch (err) {
+    return; // 사용자가 취소함
+  }
+
+  const video = document.createElement('video');
+  video.srcObject = stream;
+  await video.play();
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  stream.getTracks().forEach(track => track.stop());
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    a.href = url;
+    a.download = `우편번호구역_캡처_${ts}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+
+  statusEl.textContent = '캡처 완료: 다운로드 폴더를 확인하세요.';
+}
+
+document.getElementById('captureBtn').addEventListener('click', captureScreen);
 </script>
 </body>
 </html>
