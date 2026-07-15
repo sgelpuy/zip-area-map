@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>우편번호 구역 지도</title>
 <style>
-  html, body { height: 100%; margin: 0; font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  :root {
+    --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --border-hairline: rgba(11,11,11,0.10);
+    --grade-s: #008300;
+    --grade-a: #0ca30c;
+    --grade-b: #fab219;
+    --grade-c: #ec835a;
+    --grade-d: #d03b3b;
+    --ratio-apt: #2a78d6;
+    --ratio-officetel: #e87ba4;
+    --ratio-villa: #4a3aa7;
+    --ratio-jibun: #1baf7a;
+  }
+  html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
   #app { display: flex; flex-direction: column; height: 100%; }
   #toolbar {
     display: flex; gap: 8px; align-items: center;
@@ -16,8 +32,8 @@
     flex: 1; min-width: 260px; padding: 8px 10px; font-size: 14px;
     border: none; border-radius: 4px;
   }
-  #drawBtn, #clearBtn {
-    padding: 8px 16px; font-size: 14px; border: none; border-radius: 4px;
+  #drawBtn, #clearBtn, #captureBtn {
+    padding: 8px 16px; font-size: 14px; font-weight: 500; border: none; border-radius: 4px;
     cursor: pointer; color: #fff;
   }
   #drawBtn { background: #2563eb; }
@@ -29,25 +45,49 @@
   #status { font-size: 13px; color: #d1d5db; width: 100%; }
   #status .not-found { color: #fca5a5; }
   #map { flex: 1; position: relative; }
+
   #legend {
     position: absolute; right: 12px; bottom: 24px; z-index: 10;
-    background: rgba(255,255,255,0.95); border-radius: 6px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.3);
-    padding: 10px 12px; font-size: 12px; max-width: 260px;
-    max-height: 240px; overflow-y: auto; display: none;
+    width: 300px; max-height: min(70vh, 520px); overflow-y: auto;
+    display: none; flex-direction: column; gap: 10px;
   }
-  #legend h4 { margin: 0 0 6px; font-size: 12px; color: #374151; }
-  #legend .legend-item { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; }
-  #legend .swatch { width: 12px; height: 12px; border-radius: 2px; flex: none; margin-top: 2px; }
-  #legend .legend-text { line-height: 1.3; color: #111827; }
-  #legend .legend-hh { color: #6b7280; }
-  #legend .legend-score { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
-  #legend .score-badge {
-    display: inline-block; padding: 1px 6px; border-radius: 10px;
-    font-size: 11px; font-weight: 600; color: #fff;
+  #legend .legend-heading {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); padding-left: 2px;
   }
-  #legend .score-none { color: #9ca3af; font-style: italic; }
-  #legend .legend-excluded { color: #9ca3af; font-size: 11px; margin-top: 1px; }
+  .zone-card {
+    background: var(--surface-1); border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    border: 1px solid var(--border-hairline);
+    padding: 12px 14px; font-size: 13px; color: var(--text-primary);
+  }
+  .zone-card__header { display: flex; align-items: center; gap: 8px; }
+  .zone-card__dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .zone-card__title { flex: 1; min-width: 0; }
+  .zone-card__zip { font-weight: 700; font-size: 14px; }
+  .zone-card__region { color: var(--text-secondary); font-size: 12px; }
+
+  .grade-pill {
+    display: flex; align-items: center; gap: 6px; flex: none;
+  }
+  .grade-pill__letter {
+    width: 26px; height: 26px; border-radius: 50%; color: #fff;
+    font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .grade-pill__score { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .grade-none { font-size: 11px; color: var(--text-muted); font-style: italic; white-space: nowrap; }
+
+  .zone-card__hh {
+    margin-top: 6px; font-size: 12px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .ratio-grid { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .ratio-row { display: grid; grid-template-columns: 44px 1fr 34px; align-items: center; gap: 8px; }
+  .ratio-row__label { font-size: 11px; color: var(--text-secondary); }
+  .ratio-row__track { display: block; height: 6px; border-radius: 3px; background: var(--border-hairline); overflow: hidden; }
+  .ratio-row__fill { display: block; height: 100%; border-radius: 3px; }
+  .ratio-row__value { font-size: 11px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -178,11 +218,34 @@ async function drawZipcodes() {
 // 임시 등급 구간(공식 등급표 확정 전까지의 잠정 기준): 높을수록 유리한 구역
 function scoreBadge(score) {
   if (score == null) return null;
-  if (score >= 85) return { label: 'S', color: '#059669' };
-  if (score >= 70) return { label: 'A', color: '#65a30d' };
-  if (score >= 55) return { label: 'B', color: '#d97706' };
-  if (score >= 40) return { label: 'C', color: '#ea580c' };
-  return { label: 'D', color: '#dc2626' };
+  if (score >= 85) return { label: 'S', color: 'var(--grade-s)' };
+  if (score >= 70) return { label: 'A', color: 'var(--grade-a)' };
+  if (score >= 55) return { label: 'B', color: 'var(--grade-b)' };
+  if (score >= 40) return { label: 'C', color: 'var(--grade-c)' };
+  return { label: 'D', color: 'var(--grade-d)' };
+}
+
+const RATIO_META = [
+  { key: 'apt', label: '아파트', color: 'var(--ratio-apt)' },
+  { key: 'officetel', label: '오피스텔', color: 'var(--ratio-officetel)' },
+  { key: 'villa', label: '빌라', color: 'var(--ratio-villa)' },
+  { key: 'jibun', label: '지번', color: 'var(--ratio-jibun)' },
+];
+
+function renderRatioRows(ratios) {
+  if (!ratios) return '';
+  const rows = RATIO_META.map(({ key, label, color }) => {
+    const value = ratios[key];
+    if (value == null) return '';
+    const width = Math.max(0, Math.min(100, value));
+    return `
+      <div class="ratio-row">
+        <span class="ratio-row__label">${label}</span>
+        <span class="ratio-row__track"><span class="ratio-row__fill" style="width:${width}%;background:${color}"></span></span>
+        <span class="ratio-row__value">${value}%</span>
+      </div>`;
+  }).join('');
+  return rows ? `<div class="ratio-grid">${rows}</div>` : '';
 }
 
 function renderLegend(items) {
@@ -192,31 +255,34 @@ function renderLegend(items) {
     legendEl.innerHTML = '';
     return;
   }
-  const rows = items.map(item => {
+  const cards = items.map(item => {
     const hh = item.households != null
-      ? `<div class="legend-hh">예상 약 ${Math.round(item.households).toLocaleString()}세대</div>`
+      ? `<div class="zone-card__hh">🏠 예상 약 ${Math.round(item.households).toLocaleString()}세대</div>`
       : '';
     const badge = scoreBadge(item.score);
-    const scoreLine = badge
-      ? `<div class="legend-score"><span class="score-badge" style="background:${badge.color}">${badge.label}</span><span>${item.score.toFixed(1)}점</span></div>`
-      : `<div class="legend-score score-none">종합점수: 데이터 부족</div>`;
-    const r = item.ratios;
-    const excludedLine = (r && (r.apt != null || r.officetel != null || r.villa != null || r.jibun != null))
-      ? `<div class="legend-excluded">아파트 ${r.apt ?? '-'}% · 오피스텔 ${r.officetel ?? '-'}% · 빌라 ${r.villa ?? '-'}% · 지번 ${r.jibun ?? '-'}%</div>`
-      : '';
+    const gradeHtml = badge
+      ? `<div class="grade-pill">
+           <span class="grade-pill__letter" style="background:${badge.color}">${badge.label}</span>
+           <span class="grade-pill__score">${item.score.toFixed(1)}점</span>
+         </div>`
+      : `<span class="grade-none">평가 데이터 부족</span>`;
+
     return `
-      <div class="legend-item">
-        <span class="swatch" style="background:${item.color}"></span>
-        <div class="legend-text">
-          <div>${item.zipcode} (${item.region})</div>
-          ${hh}
-          ${scoreLine}
-          ${excludedLine}
+      <div class="zone-card">
+        <div class="zone-card__header">
+          <span class="zone-card__dot" style="background:${item.color}"></span>
+          <div class="zone-card__title">
+            <div class="zone-card__zip">${item.zipcode}</div>
+            <div class="zone-card__region">${item.region}</div>
+          </div>
+          ${gradeHtml}
         </div>
+        ${hh}
+        ${renderRatioRows(item.ratios)}
       </div>`;
   }).join('');
-  legendEl.innerHTML = `<h4>우편번호 구역</h4>${rows}`;
-  legendEl.style.display = 'block';
+  legendEl.innerHTML = `<div class="legend-heading">우편번호 구역</div>${cards}`;
+  legendEl.style.display = 'flex';
 }
 
 document.getElementById('drawBtn').addEventListener('click', drawZipcodes);
