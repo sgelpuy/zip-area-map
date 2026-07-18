@@ -140,12 +140,10 @@
     <div id="howPopup">
       <h4>종합점수는 이렇게 계산돼요</h4>
       <ul>
-        <li><b>환경평가 (55%)</b> — 아파트·오피스텔 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
-        <li><b>세대수평가 (35%)</b> — 우편번호 구역의 예상 세대수가 많을수록 유리</li>
-        <li><b>접근성평가 (10%)</b> — 엘리베이터 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
+        <li><b>환경평가 (50%)</b> — 아파트·오피스텔 세대수 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
+        <li><b>밀도평가 (50%)</b> — 세대당면적(구역 면적 ÷ 예상세대수)이 작을수록, 즉 세대가 촘촘하게 모여있을수록 유리</li>
       </ul>
       <div class="how-note">
-        물량평가·캠프거리평가는 아직 실측 데이터가 없어서 잠시 빼뒀어요(데이터 확보되면 다시 추가 예정).
         일부 항목 데이터가 없는 구역은 해당 항목만 계산에서 빼고 나머지 항목 비중으로 다시 나눠서 점수를 냅니다.
         아파트·오피스텔·빌라·단독주택 비율은 건물이 아니라 실제 거주 세대수 기준으로 계산하며, 네 비율을 더하면 항상 100%가 됩니다.
         등급은 S(85점↑)·A(70↑)·B(55↑)·C(40↑)·D(그 미만) 5단계예요.
@@ -247,6 +245,7 @@ async function drawZipcodes() {
       zipcode: entry.zipcode,
       region: entry.region,
       households: entry.estimated_households,
+      density: entry.density_m2_per_household,
       score: entry.score,
       ratios: entry.ratios || null,
     });
@@ -309,6 +308,9 @@ function renderLegend(items) {
     const hh = item.households != null
       ? `<div class="zone-card__hh">🏠 약 ${Math.round(item.households).toLocaleString()}세대</div>`
       : '';
+    const density = item.density != null
+      ? `<div class="zone-card__hh">📐 세대당면적 약 ${Math.round(item.density).toLocaleString()}㎡</div>`
+      : '';
     const badge = scoreBadge(item.score);
     const gradeHtml = badge
       ? `<div class="grade-pill">
@@ -330,6 +332,7 @@ function renderLegend(items) {
           ${gradeHtml}
         </div>
         ${hh}
+        ${density}
         ${renderComposition(item.ratios)}
       </div>`;
   }).join('');

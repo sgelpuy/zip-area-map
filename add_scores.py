@@ -1,7 +1,7 @@
 """run_scoring.py가 만든 우편번호_구역평가_점수.csv를 웹앱의 data/*.json에 병합한다.
 population_join.py와 같은 패턴: 각 우편번호 json 파일을 읽어서 점수 필드를 덧붙이고 다시 쓴다.
 
-일일물량/캠프거리처럼 아직 없는 데이터가 채워져서 run_scoring.py를 다시 돌리면,
+원본 데이터(면적, 예상세대수 등)가 갱신돼서 run_scoring.py를 다시 돌리면,
 이 스크립트도 다시 실행해서 웹앱 데이터를 갱신하면 된다.
 """
 import csv
@@ -12,7 +12,7 @@ WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WEBAPP_DIR, "data")
 SCORE_CSV = os.path.join(WEBAPP_DIR, "..", "..", "우편번호_구역평가_점수.csv")
 
-CATEGORY_COLUMNS = ["환경평가", "세대수평가", "접근성평가"]
+CATEGORY_COLUMNS = ["환경평가", "밀도평가"]
 RATIO_COLUMNS = {
     "아파트비율(%)": "apt",
     "오피스텔비율(%)": "officetel",
@@ -56,6 +56,7 @@ def main():
             entry["score"] = round(float(composite), 1) if composite else None
             entry["score_excluded"] = sorted(excluded)
             entry["ratios"] = build_ratios(row)
+            entry["density_m2_per_household"] = _num(row.get("세대당면적(㎡)"))
 
             with open(path, "w", encoding="utf-8") as jf:
                 json.dump(entry, jf, ensure_ascii=False, separators=(",", ":"))
