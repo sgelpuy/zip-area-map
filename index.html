@@ -123,6 +123,23 @@
   .ratio-row__track { display: block; height: 7px; border-radius: 3.5px; background: var(--border-hairline); overflow: hidden; }
   .ratio-row__fill { display: block; height: 100%; border-radius: 3.5px; }
   .ratio-row__value { font-size: 13px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+
+  .resident-block { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border-hairline); }
+  .resident-block__total { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .resident-block__total small { font-weight: 500; color: var(--text-secondary); font-size: 12px; margin-left: 4px; }
+  .resident-type-grid { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+  .resident-type-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .resident-type-row__label { color: var(--text-secondary); }
+  .resident-type-row__value { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+  .confidence-pill {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+    font-size: 12px; padding: 3px 9px; border-radius: 999px; font-weight: 600;
+  }
+  .confidence-pill.high { background: rgba(0,131,0,0.12); color: var(--grade-s); }
+  .confidence-pill.medium { background: rgba(250,178,25,0.15); color: #a86a00; }
+  .confidence-pill.low { background: rgba(208,59,59,0.12); color: var(--grade-d); }
+  .resident-notice { margin-top: 8px; font-size: 11px; line-height: 1.5; color: var(--text-muted); }
+  .resident-unavailable { margin-top: 10px; font-size: 12px; color: var(--text-muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -190,6 +207,17 @@ async function fetchZipEntry(code) {
   return res.json();
 }
 
+async function fetchResidentEntry(code) {
+  const shard = code.slice(0, 2);
+  try {
+    const res = await fetch(`data-residents/${shard}/${code}.json`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
 async function drawZipcodes() {
   const raw = document.getElementById('zipInput').value;
   const codes = normalizeCodes(raw);
@@ -211,11 +239,11 @@ async function drawZipcodes() {
   let colorIdx = 0;
 
   const results = await Promise.all(codes.map(async code => {
-    const entry = await fetchZipEntry(code);
-    return { code, entry };
+    const [entry, residents] = await Promise.all([fetchZipEntry(code), fetchResidentEntry(code)]);
+    return { code, entry, residents };
   }));
 
-  for (const { code, entry } of results) {
+  for (const { code, entry, residents } of results) {
     if (!entry) {
       notFound.push(code);
       continue;
@@ -248,6 +276,7 @@ async function drawZipcodes() {
       density: entry.density_m2_per_household,
       score: entry.score,
       ratios: entry.ratios || null,
+      residents: residents || null,
     });
   }
 
@@ -297,6 +326,51 @@ function renderComposition(ratios) {
   return rows ? `<div class="ratio-grid">${rows}</div>` : '';
 }
 
+function fmtNum(n) {
+  return (n == null || Number.isNaN(n)) ? '-' : Math.round(n).toLocaleString();
+}
+
+function renderResidents(residents) {
+  if (!residents) return '';
+  if (residents.status === 'data_unavailable') {
+    return `<div class="resident-unavailable">추정 거주 인구 데이터 없음${residents.error ? ` (${residents.error})` : ''}</div>`;
+  }
+  if (residents.status !== 'ok') return '';
+
+  const total = residents.total || {};
+  const conf = residents.confidence || {};
+  const ref = residents.reference_year || {};
+  const typeOrder = ['apartment', 'officetel', 'villa', 'detached', 'other'];
+
+  const typeRows = typeOrder
+    .map(key => residents.housing_types && residents.housing_types[key])
+    .filter(Boolean)
+    .map(t => {
+      const pop = t.estimated_residents == null ? '-' : `${fmtNum(t.estimated_residents)}명`;
+      return `
+        <div class="resident-type-row">
+          <span class="resident-type-row__label">${t.label}</span>
+          <span class="resident-type-row__value">${pop} · ${fmtNum(t.estimated_households)}가구${t.share != null ? ` (${t.share}%)` : ''}</span>
+        </div>`;
+    }).join('');
+
+  const gradeLabel = { high: '높음', medium: '보통', low: '낮음' }[conf.grade] || conf.grade || '';
+
+  return `
+    <div class="resident-block">
+      <div class="resident-block__total">
+        추정 거주 인구 약 ${total.estimated_residents == null ? '산정 불가' : `${fmtNum(total.estimated_residents)}명`}
+        <small>추정 거주 가구 약 ${fmtNum(total.estimated_households)}가구</small>
+      </div>
+      <div class="resident-type-grid">${typeRows}</div>
+      <div class="confidence-pill ${conf.grade || ''}">추정 신뢰도: ${gradeLabel} (${conf.score ?? '-'}점)</div>
+      <div class="resident-notice">
+        기준연도 - SGIS: ${ref.sgis ?? '-'} · 건축물대장: ${ref.building_registry ?? '-'}<br/>
+        ${residents.notice || ''}
+      </div>
+    </div>`;
+}
+
 function renderLegend(items) {
   const legendEl = document.getElementById('legend');
   if (items.length === 0) {
@@ -334,6 +408,7 @@ function renderLegend(items) {
         ${hh}
         ${density}
         ${renderComposition(item.ratios)}
+        ${renderResidents(item.residents)}
       </div>`;
   }).join('');
   legendEl.innerHTML = `<div class="legend-heading">우편번호 구역</div>${cards}`;
