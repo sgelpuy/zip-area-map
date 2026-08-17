@@ -559,7 +559,9 @@ const MAX_CLICK_LEVEL = 8;   // 이보다 넓은 뷰(전국 등)에서는 조회
                              // 클릭 1픽셀이 수백 미터라 의미가 없고, 지나가는
                              // 클릭 한 번에 bbox 인덱스를 받게 되는 것도 막는다.
 const HOVER_DELAY = 120;     // ms. 마우스가 멈춘 뒤에만 조회한다
-const HOVER_COLOR = '#6b7280';
+// 지도 배경(밝은 회색·흰색)에 묻히지 않게 충분히 진한 색을 쓴다. 선택 상태는
+// 파란 실선 4px이라 점선 3px + 옅은 채움으로 구분된다.
+const HOVER_COLOR = '#111827';
 
 let clickSeq = 0;
 let hoverSeq = 0;
@@ -580,12 +582,12 @@ function drawHoverPreview(entry) {
   for (const path of entryToPolygonPaths(entry)) {
     const polygon = new kakao.maps.Polygon({
       path,
-      strokeWeight: 2,
+      strokeWeight: 3,
       strokeColor: HOVER_COLOR,
-      strokeOpacity: 0.9,
+      strokeOpacity: 1,
       strokeStyle: 'shortdash',
       fillColor: HOVER_COLOR,
-      fillOpacity: 0.06,
+      fillOpacity: 0.15,
     });
     polygon.setMap(map);
     attachZoneHandlers(polygon);
