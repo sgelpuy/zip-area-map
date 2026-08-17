@@ -18,7 +18,7 @@ import os
 
 WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WEBAPP_DIR, "data")
-SCORE_CSV = os.path.join(WEBAPP_DIR, "..", "..", "우편번호_구역평가_점수.csv")
+SCORE_CSV = os.path.join(WEBAPP_DIR, "..", "..", "data", "우편번호_구역평가_점수.csv")
 
 CATEGORY_COLUMNS = ["환경평가", "밀도평가"]
 RATIO_COLUMNS = {

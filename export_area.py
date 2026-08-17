@@ -9,7 +9,7 @@ import os
 
 WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WEBAPP_DIR, "data")
-OUT_PATH = os.path.join(WEBAPP_DIR, "..", "..", "우편번호_면적.csv")
+OUT_PATH = os.path.join(WEBAPP_DIR, "..", "..", "data", "우편번호_면적.csv")
 
 
 def main():
