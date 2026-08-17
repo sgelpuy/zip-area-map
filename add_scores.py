@@ -56,7 +56,11 @@ def main():
             entry["score"] = round(float(composite), 1) if composite else None
             entry["score_excluded"] = sorted(excluded)
             entry["ratios"] = build_ratios(row)
-            entry["density_m2_per_household"] = _num(row.get("세대당면적(㎡)"))
+            # 밀도 지표가 "세대당면적"에서 "1인당면적"으로 바뀌었다(인구 기반 평가로 전환).
+            # 예전 필드는 의미가 달라졌으므로 남겨두지 않고 지운다.
+            entry.pop("density_m2_per_household", None)
+            entry["density_m2_per_person"] = _num(row.get("1인당면적(㎡)"))
+            entry["estimated_population"] = _num(row.get("추정인구(명)"))
 
             with open(path, "w", encoding="utf-8") as jf:
                 json.dump(entry, jf, ensure_ascii=False, separators=(",", ":"))

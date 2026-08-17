@@ -157,13 +157,14 @@
     <div id="howPopup">
       <h4>종합점수는 이렇게 계산돼요</h4>
       <ul>
-        <li><b>환경평가 (50%)</b> — 아파트·오피스텔 세대수 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
-        <li><b>밀도평가 (50%)</b> — 세대당면적(구역 면적 ÷ 예상세대수)이 작을수록, 즉 세대가 촘촘하게 모여있을수록 유리</li>
+        <li><b>환경평가 (70%)</b> — 아파트·오피스텔 세대수 비중은 높고, 빌라·단독주택 비중은 낮을수록 유리</li>
+        <li><b>밀도평가 (30%)</b> — 1인당면적(구역 면적 ÷ 추정인구)이 작을수록, 즉 사람이 촘촘하게 모여있을수록 유리</li>
       </ul>
       <div class="how-note">
         일부 항목 데이터가 없는 구역은 해당 항목만 계산에서 빼고 나머지 항목 비중으로 다시 나눠서 점수를 냅니다.
         아파트·오피스텔·빌라·단독주택 비율은 건물이 아니라 실제 거주 세대수 기준으로 계산하며, 네 비율을 더하면 항상 100%가 됩니다.
-        등급은 S(85점↑)·A(70↑)·B(55↑)·C(40↑)·D(그 미만) 5단계예요.
+        건물마다 도로명주소로 우편번호를 직접 찾아 집계하기 때문에, 같은 동 안에서도 구역별로 점수가 다르게 나옵니다.
+        등급은 전국 분포 기준으로 S(상위 10%)·A(상위 30%)·B(상위 60%)·C(상위 85%)·D(하위 15%) 5단계예요.
       </div>
     </div>
     <div id="legend"></div>
@@ -273,7 +274,8 @@ async function drawZipcodes() {
       zipcode: entry.zipcode,
       region: entry.region,
       households: entry.estimated_households,
-      density: entry.density_m2_per_household,
+      density: entry.density_m2_per_person,
+      population: entry.estimated_population,
       score: entry.score,
       ratios: entry.ratios || null,
       residents: residents || null,
@@ -293,13 +295,18 @@ async function drawZipcodes() {
   statusEl.innerHTML = msg;
 }
 
-// 임시 등급 구간(공식 등급표 확정 전까지의 잠정 기준): 높을수록 유리한 구역
+// 등급 구간: 전국 점수 분포의 백분위로 자른다 (S 상위10% / A 20% / B 30% / C 25% / D 하위15%).
+// 점수는 0~100 풀스케일이다 - 환경평가는 아파트비율(40%)과 오피스텔비율(30%)이 서로
+// 배타적이라 원점수로는 70점이 천장인데, score_engine에서 도달 가능한 최대값으로
+// 정규화해서 아파트 100% 구역이 100점을 받게 맞춰뒀다.
+// 컷 값은 2026-08-17 산출물(점수 있는 32,082개 구역, 밀도평가를 인구 기반으로 전환한 뒤)
+// 기준 - 점수 산식이나 데이터가 바뀌면 다시 계산해야 한다.
 function scoreBadge(score) {
   if (score == null) return null;
-  if (score >= 85) return { label: 'S', color: 'var(--grade-s)' };
-  if (score >= 70) return { label: 'A', color: 'var(--grade-a)' };
-  if (score >= 55) return { label: 'B', color: 'var(--grade-b)' };
-  if (score >= 40) return { label: 'C', color: 'var(--grade-c)' };
+  if (score >= 94.4) return { label: 'S', color: 'var(--grade-s)' };
+  if (score >= 69.3) return { label: 'A', color: 'var(--grade-a)' };
+  if (score >= 30.2) return { label: 'B', color: 'var(--grade-b)' };
+  if (score >= 21.6) return { label: 'C', color: 'var(--grade-c)' };
   return { label: 'D', color: 'var(--grade-d)' };
 }
 
@@ -383,7 +390,10 @@ function renderLegend(items) {
       ? `<div class="zone-card__hh">🏠 약 ${Math.round(item.households).toLocaleString()}세대</div>`
       : '';
     const density = item.density != null
-      ? `<div class="zone-card__hh">📐 세대당면적 약 ${Math.round(item.density).toLocaleString()}㎡</div>`
+      ? `<div class="zone-card__hh">📐 1인당면적 약 ${Math.round(item.density).toLocaleString()}㎡</div>`
+      : '';
+    const pop = item.population != null
+      ? `<div class="zone-card__hh">👥 추정인구 약 ${Math.round(item.population).toLocaleString()}명</div>`
       : '';
     const badge = scoreBadge(item.score);
     const gradeHtml = badge
@@ -406,6 +416,7 @@ function renderLegend(items) {
           ${gradeHtml}
         </div>
         ${hh}
+        ${pop}
         ${density}
         ${renderComposition(item.ratios)}
         ${renderResidents(item.residents)}
